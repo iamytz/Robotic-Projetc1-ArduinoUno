@@ -67,6 +67,9 @@ const int MEDIA = 280;
 const int LONGA = 500;
 
 const int PAUSA_FRASE = 80;
+
+//inicia ciclo contagem 
+int countLed =  false;
 // ==================================================
 
 void setup() {
@@ -184,6 +187,22 @@ void loop() {
         case 0xFA05FF00:
           Serial.println("Comando: Volume ");
           bipar();
+          break;
+
+        case 0xFD02FF00:
+          Serial.println("Comando: Luz ");
+          if (countLed) {
+            countLed = false;
+            atualizarLeds(LOW,LOW,LOW);
+          } else {
+            countLed = true;
+            atualizarLeds(HIGH,HIGH,HIGH);
+          }
+          break;
+
+        case 0xFF00FF00:
+          Serial.println("Comando: Luz OFF ");
+          atualizarLeds(LOW,LOW,LOW);
           break;
 
         default:
