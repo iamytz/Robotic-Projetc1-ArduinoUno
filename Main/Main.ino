@@ -16,8 +16,8 @@ const int IN3_DIANTEIRO = 10;
 const int IN4_DIANTEIRO = 11;
 
 //sensor ultra
-const int TRIG_PIN = 12;
-const int ECHO_PIN = 13;
+  const int TRIG_PIN = 12;
+  const int ECHO_PIN = 13;
 
 //botão emergencia
 const int BOTAO_PIN = 3;  
@@ -401,6 +401,13 @@ void rodarLosangulo() {
 
     bipar();
     direita(); delay(TEMPO_GIRO_90);
+    frente(); delay(500);
+    parado(); delay(500);
+    direita(); delay(TEMPO_GIRO_90);
+
+
+
+
     
     parado();
     roboLigado = false;
