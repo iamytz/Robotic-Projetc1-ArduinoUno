@@ -1,6 +1,6 @@
 #include <IRremote.hpp>
 
-// Define o pino onde o receptor IR está conectado
+// Pino do receptor IR
 const int pinoReceptorIR = A4;
 
 // Driver 1 - Traseiro
@@ -15,66 +15,22 @@ const int IN2_DIANTEIRO = 9;
 const int IN3_DIANTEIRO = 10;
 const int IN4_DIANTEIRO = 11;
 
-//sensor ultra
-  const int TRIG_PIN = 12;
-  const int ECHO_PIN = 13;
-
-//botão emergencia
-const int BOTAO_PIN = 3;  
-
-bool roboLigado = false;
-
-bool estadoBotaoAnterior = HIGH;      
-unsigned long ultimoDebounceTime = 0; 
-const unsigned long delayDebounce = 200; 
+const int TRIG_PIN = 12;
+const int ECHO_PIN = 13;
 
 unsigned long tempoUltimoSinal = 0;
-const unsigned long TEMPO_LIMITE = 250; 
-
-// LEDs e Buzzer
-const int LED_ROTA3 = A0;
-const int LED_ROTA2 = A1;
-const int LED_ROTA1 = A2;
-const int BUZZER_PIN = A3;
+const unsigned long TEMPO_LIMITE = 250;
 
 //tempo de giro
-const int TEMPO_GIRO_45  = 245;
 const int TEMPO_GIRO_90  = 490;
 const int TEMPO_GIRO_180 = 1040;
 const int TEMPO_GIRO_360 = 2080;
 
-// ================= NOTAS E TEMPOS =================
-const int C4 = 262;
-const int D4 = 294;
-const int DIS4 = 311;
-const int E4 = 330;
-const int F4 = 349;
-const int G4 = 392;
-const int NOTA_A4 = 440;
-const int B4 = 494;
-
-const int C5 = 523;
-const int D5 = 587;
-const int DIS5 = 622;
-const int E5 = 659;
-const int F5 = 698;
-const int G5 = 784;
-const int NOTA_A5 = 880;
-const int B5 = 988;
-
-const int CURTA = 180;
-const int MEDIA = 280;
-const int LONGA = 500;
-
-const int PAUSA_FRASE = 80;
-
-//inicia ciclo contagem 
-int countLed =  false;
 // ==================================================
 
 void setup() {
   Serial.begin(9600);
-  IrReceiver.begin(pinoReceptorIR, ENABLE_LED_FEEDBACK);
+  IrReceiver.begin(pinoReceptorIR, false);
   Serial.println("Aguardando comandos...");
 
   // Configuração dos Drivers
@@ -90,17 +46,8 @@ void setup() {
 
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
-  pinMode(BOTAO_PIN, INPUT_PULLUP);
-  
-  pinMode(BUZZER_PIN, OUTPUT); 
-
-  pinMode(LED_ROTA1, OUTPUT);
-  pinMode(LED_ROTA2, OUTPUT);
-  pinMode(LED_ROTA3, OUTPUT);
-
-  Serial.println("Robo pronto!");
   parado();
-  bipar(); // Bip de inicialização usando sua função segura
+  Serial.println("Robo pronto!");
 }
 
 void loop() {
@@ -156,25 +103,6 @@ void loop() {
           Serial.println("Comando: Botao 4");
           danca();
           break;
-        case 0xEA15FF00:
-          Serial.println("Comando: Botao 5");
-          tocarNota(C4, LONGA);
-          break;
-        case 0xE916FF00:
-          Serial.println("Comando: Botao 6");
-          {
-            const int fraseTeste[][2] = {
-              {C4, CURTA},
-              {D4, CURTA},
-              {E4, LONGA}
-            };
-            tocarFrase(fraseTeste, 3);
-          }
-          break;
-        case 0xE718FF00:
-          Serial.println("Comando: Botao 7");          
-          tocarFurElise();
-          break;
         case 0xE619FF00:
           Serial.println("Comando: Botao 8");
           rodarEsquerda();
@@ -182,27 +110,6 @@ void loop() {
         case 0xE51AFF00:
           Serial.println("Comando: Botao 9");
           rodarDireita();
-          break;
-
-        case 0xFA05FF00:
-          Serial.println("Comando: Volume ");
-          bipar();
-          break;
-
-        case 0xFD02FF00:
-          Serial.println("Comando: Luz ");
-          if (countLed) {
-            countLed = false;
-            atualizarLeds(LOW,LOW,LOW);
-          } else {
-            countLed = true;
-            atualizarLeds(HIGH,HIGH,HIGH);
-          }
-          break;
-
-        case 0xFF00FF00:
-          Serial.println("Comando: Luz OFF ");
-          atualizarLeds(LOW,LOW,LOW);
           break;
 
         default:
@@ -220,75 +127,6 @@ void loop() {
   }
 }
 
-// ==============================================================
-// FUNÇÕES DE SOM (AGORA 100% SEGURAS PARA O IR)
-// ==============================================================
-
-void bipar() {
-  for (int i = 0; i < 100; i++) {
-    digitalWrite(BUZZER_PIN, HIGH);
-    delayMicroseconds(1000); 
-    digitalWrite(BUZZER_PIN, LOW);
-    delayMicroseconds(1000); 
-    
-    digitalWrite(BUZZER_PIN, HIGH);
-    delayMicroseconds(1000); 
-    digitalWrite(BUZZER_PIN, LOW);
-    delayMicroseconds(1000); 
-  }
-}
-
-// Nova versão de tocarNota que funciona como o bipar() (sem usar a função tone())
-void tocarNota(int frequencia, int duracao) {
-  long periodo = 1000000L / frequencia;
-  long metadePeriodo = periodo / 2;
-  long ciclos = ((long)duracao * 1000L) / periodo;
-
-  for (long i = 0; i < ciclos; i++) {
-    digitalWrite(BUZZER_PIN, HIGH);
-    delayMicroseconds(metadePeriodo);
-    digitalWrite(BUZZER_PIN, LOW);
-    delayMicroseconds(metadePeriodo);
-  }
-}
-
-void tocarFrase(const int notas[][2], int quantidade) {
-  for (int i = 0; i < quantidade; i++) {
-    tocarNota(notas[i][0], notas[i][1]);
-    delay(10); // Pequena pausa entre as notas para não embolar o som
-  }
-}
-
-void tocarFurElise() {
-  const int frase1[][2] = {
-    {E5, CURTA}, {DIS5, CURTA}, {E5, CURTA}, {DIS5, CURTA},
-    {E5, CURTA}, {B4, CURTA}, {D5, CURTA}, {C5, CURTA}, {NOTA_A4, LONGA}
-  };
-  const int frase2[][2] = {
-    {C4, CURTA}, {E4, CURTA}, {NOTA_A4, CURTA}, {B4, LONGA}
-  };
-  const int frase3[][2] = {
-    {E4, CURTA}, {G4, CURTA}, {B4, CURTA}, {C5, LONGA}
-  };
-  const int frase4[][2] = {
-    {E4, MEDIA}, {E5, CURTA}, {DIS5, CURTA}, {E5, CURTA},
-    {DIS5, CURTA}, {E5, CURTA}, {B4, CURTA}, {D5, CURTA},
-    {C5, CURTA}, {NOTA_A4, LONGA}
-  };
-  const int frase5[][2] = {
-    {C4, CURTA}, {E4, CURTA}, {NOTA_A4, CURTA}, {B4, LONGA}
-  };
-  const int frase6[][2] = {
-    {E4, CURTA}, {C5, CURTA}, {B4, CURTA}, {NOTA_A4, LONGA}
-  };
-
-  tocarFrase(frase1, 9); delay(PAUSA_FRASE);
-  tocarFrase(frase2, 4); delay(PAUSA_FRASE);
-  tocarFrase(frase3, 4); delay(PAUSA_FRASE);
-  tocarFrase(frase4, 10); delay(150);
-  tocarFrase(frase5, 4); delay(PAUSA_FRASE);
-  tocarFrase(frase6, 4);
-}
 
 // ==============================================================
 // FUNÇÕES DE MOVIMENTO
@@ -340,7 +178,7 @@ void esquerda() {
 }
 
 // ==============================================================
-// FUNÇÕES ESPECIAIS / ROTINAS (Com os bips seguros)
+// SENSOR ULTRASSÔNICO E ROTINAS DE MOVIMENTO
 // ==============================================================
 
 bool distanciaSegura() {
@@ -356,20 +194,12 @@ bool distanciaSegura() {
   return (duracao * 0.034 / 2) > 30;
 }
 
-void atualizarLeds(bool l1, bool l2, bool l3) {
-  digitalWrite(LED_ROTA1, l1);
-  digitalWrite(LED_ROTA2, l2);
-  digitalWrite(LED_ROTA3, l3);
-}
 
 void linhaReta() {
-  atualizarLeds(HIGH, LOW, LOW);
-
   if (distanciaSegura()) {
     frente();
     delay(1000);
 
-    bipar(); // Substituído tone() por bipar()
     direita();
     delay(TEMPO_GIRO_180);
 
@@ -378,81 +208,60 @@ void linhaReta() {
     frente();
     delay(1000);
   
-    bipar(); // Substituído tone() por bipar()
     esquerda();
     delay(TEMPO_GIRO_180);
 
     parado();
-    roboLigado = false; 
   } else {
     parado();
-    bipar();
   }
 }
 
 void rodarLosangulo() {
-  atualizarLeds(LOW, HIGH, LOW);
-
   if (distanciaSegura()) {
     frente(); delay(500);
     parado(); delay(500);
 
-    bipar(); // Substituído tone() por bipar()
     direita(); delay(TEMPO_GIRO_90);
     parado(); delay(500);
 
     frente(); delay(500);
     parado(); delay(500);
 
-    bipar();
+    direita(); delay(TEMPO_GIRO_90);
+    parado(); delay(500);
+
+    frente(); delay(500);
+    parado(); delay(500);
     direita(); delay(TEMPO_GIRO_90);
     parado(); delay(500);
 
     frente(); delay(500);
     parado(); delay(500);
 
-    bipar();
-    direita(); delay(TEMPO_GIRO_90);
-    parado(); delay(500);
-
-    frente(); delay(500);
-    parado(); delay(500);
-
-    bipar();
     direita(); delay(TEMPO_GIRO_90);
     frente(); delay(500);
     parado(); delay(500);
     direita(); delay(TEMPO_GIRO_90);
 
-
-
-
-    
     parado();
-    roboLigado = false;
   } else {
     parado();
-    bipar();
   }
 }
 
 void andarInfinito() {
-  atualizarLeds(LOW, LOW, HIGH);
-
   if (distanciaSegura()) {
     frente();
   } else {
     parado();
-    bipar(); // Aviso de obstáculo
 
-    bipar();
     direita();
     delay(TEMPO_GIRO_90);
     parado();
     delay(400);
 
     if (!distanciaSegura()) {
-      bipar();
       esquerda();
       delay(TEMPO_GIRO_180);
       parado();
@@ -462,8 +271,6 @@ void andarInfinito() {
 }
 
 void zigueZague() {
-  atualizarLeds(LOW, HIGH, HIGH);
-
   if (distanciaSegura()) {
     frente(); delay(1000);
     direita(); delay(TEMPO_GIRO_90);
@@ -474,16 +281,12 @@ void zigueZague() {
     frente(); delay(1000);
     esquerda(); delay(TEMPO_GIRO_90);
     parado();
-    roboLigado = false;
   } else {
     parado();
-    bipar();
   }
 }
 
 void danca() {
-  atualizarLeds(HIGH, HIGH, HIGH);
-
   if (distanciaSegura()) {
     frente(); delay(500);
     parado(); delay(300);
@@ -496,11 +299,7 @@ void danca() {
     frente(); delay(500);
     parado();
 
-    tocarFurElise(); // Agora vai tocar sem travar!
-
-    roboLigado = false;
   } else {
     parado();
-    bipar();
   }
 }
